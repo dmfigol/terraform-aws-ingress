@@ -1,0 +1,56 @@
+version: "3"
+
+vars:
+  MODULES: ["ingress"]
+  TF_BINARY: tofu
+
+tasks:
+  plan:
+    desc: Run plan
+    dir: "{{.USER_WORKING_DIR}}"
+    cmds:
+      - "{{.TF_BINARY}} plan"
+
+  apply:
+    desc: Run apply
+    dir: "{{.USER_WORKING_DIR}}"
+    cmds:
+      - "{{.TF_BINARY}} apply -auto-approve"
+
+  fmt:
+    desc: Format terraform files
+    cmds:
+      - for:
+          var: MODULES
+        cmd: "{{.TF_BINARY}} fmt -recursive"
+
+  # check-llm:
+  #   desc: Run concise plan optimized for machines / LLM
+  #   dir: "{{.USER_WORKING_DIR}}"
+  #   cmds:
+  #     - '{{.TF_BINARY}} init -json | grep -v ''"@level":"info"'' | { grep -v grep || true; }'
+  #     - "{{.TF_BINARY}} validate -json"
+  #     - |
+  #       {{.TF_BINARY}} plan -json | jq -cM '
+  #       if .type == "change_summary" or .type == "planned_change" then
+  #         del(."@timestamp", ."@level")
+  #       else
+  #         select(."@level" != "info")      # drop info lines of other types
+  #         | del(."@timestamp", ."@level")
+  #       end
+  #       '
+
+  docs:
+    desc: Generate docs for terraform modules
+    dir: src/
+    cmds:
+      - for:
+          var: MODULES
+        cmd: "terraform-docs markdown table --output-file REFERENCE.md --output-mode inject {{.ITEM}} --hide resources,data-sources,modules,providers"
+
+  tests:
+    desc: Run tests
+    cmds:
+      - for:
+          var: MODULES
+        cmd: cd tests/{{.ITEM}} && go test .
