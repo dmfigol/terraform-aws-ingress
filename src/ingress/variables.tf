@@ -6,14 +6,33 @@ variable "load_balancers" {
     subnet_mappings = list(object({
       subnet_id = string
     }))
+    ip_address_type = optional(string, "ipv4")
     listeners = map(object({
       certificates = optional(list(string), [])
       default_action = object({
-        target_group = string
+        target_group = optional(string, null)
+        type         = optional(string, "forward")
+        url          = optional(string, null)
+        status_code  = optional(string, null)
       })
+      rules = optional(list(object({
+        priority = number
+        conditions = list(object({
+          field  = string
+          values = list(string)
+        }))
+        action = object({
+          target_group = optional(string, null)
+          type         = optional(string, "forward")
+          status_code  = optional(string, null)
+          message_body = optional(string, null)
+          content_type = optional(string, null)
+        })
+      })), [])
     }))
     security_groups = optional(list(string), [])
     dns_records = optional(map(object({
+      name = optional(string, null)
       type = string
       zone = string
     })), {})
@@ -30,7 +49,9 @@ variable "load_balancer_target_groups" {
     health_check = object({
       protocol = string
       port     = number
+      path     = optional(string, null)
     })
+    targets = optional(list(string), [])
   }))
 }
 
