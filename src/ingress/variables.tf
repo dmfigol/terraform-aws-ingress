@@ -46,11 +46,11 @@ variable "load_balancer_target_groups" {
     target_type = string
     protocol    = string
     port        = number
-    health_check = object({
-      protocol = string
-      port     = number
-      path     = optional(string, null)
-    })
+    health_check = optional(object({
+      protocol = optional(string)
+      port     = optional(number)
+      path     = optional(string)
+    }))
     targets = optional(list(string), [])
   }))
 }

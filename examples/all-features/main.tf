@@ -55,12 +55,12 @@ module "ingress" {
     }
   }
   load_balancer_target_groups = {
-    "TestNLB-TCP-8080" : { "target_type" : "ip", "protocol" : "TCP", "port" : 8080, "health_check" : { "protocol" : "TCP", "port" : 8080 } },
+    "TestNLB-TCP-8080" : { "target_type" : "ip", "protocol" : "TCP", "port" : 8080 },
     "TestNLB-UDP-20000" : { "target_type" : "ip", "protocol" : "UDP", "port" : 20000, "health_check" : { "protocol" : "TCP", "port" : 8080 } },
     "AppUI-HTTP-8000" : { "target_type" : "instance", "protocol" : "HTTP", "port" : 8000, "health_check" : { "protocol" : "HTTP", "port" : 8000, "path" : "/health" }, "targets" : [
       "i-009ad6a5c320bf378:8000"
     ] },
-    "AppAPI-HTTPS-8089" : { "target_type" : "ip", "protocol" : "HTTPS", "port" : 8089, "health_check" : { "protocol" : "HTTPS", "port" : 8089 }, "targets" : [
+    "AppAPI-HTTPS-8089" : { "target_type" : "ip", "protocol" : "HTTPS", "port" : 8089, "targets" : [
       "10.20.2.17:8089"
     ] },
   }

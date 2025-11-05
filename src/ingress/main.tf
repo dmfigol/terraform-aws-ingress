@@ -79,9 +79,9 @@ resource "awscc_elasticloadbalancingv2_target_group" "this" {
   vpc_id      = local.target_group_vpc_ids[each.key]
 
   health_check_enabled  = true
-  health_check_protocol = each.value.health_check.protocol
-  health_check_port     = each.value.health_check.port
-  health_check_path     = each.value.health_check.path
+  health_check_protocol = local.health_check_defaults[each.key].protocol
+  health_check_port     = local.health_check_defaults[each.key].port
+  health_check_path     = local.health_check_defaults[each.key].path
 
   targets = length(each.value.targets) > 0 ? [
     for target in each.value.targets : {

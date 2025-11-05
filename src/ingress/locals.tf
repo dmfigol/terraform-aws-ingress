@@ -38,4 +38,15 @@ locals {
       local.load_balancer_vpc_ids[keys(local.load_balancer_vpc_ids)[0]]
     )
   }
+
+  # Smart defaults for health checks
+  health_check_defaults = {
+    for tg_key, tg in var.load_balancer_target_groups : tg_key => {
+      protocol = coalesce(try(tg.health_check.protocol, null), tg.protocol)
+      port     = coalesce(try(tg.health_check.port, null), tg.port)
+      path = try(tg.health_check.path, null) != null ? tg.health_check.path : (
+        contains(["HTTP", "HTTPS"], tg.protocol) ? "/" : null
+      )
+    }
+  }
 }
