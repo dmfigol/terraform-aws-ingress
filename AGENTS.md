@@ -21,7 +21,7 @@
 - Put outputs into outputs.tf. Return full resources from provider when relevant. When there is a resource with "tags" attribute, convert it from list of maps into a single map.
 - Cleanup unused variables and statements in terraform files when making changes.
 - Avoid changing reference.md files manually, use `task docs` to regenerate them.
-- Fix README.md when it is outdated (e.g. the input interface changes)
+- Fix README.md when it is outdated (e.g. the input interface changes).
 
 ## Tool selection
 When you need to call tools from the shell, use the following tools if they are available on the ystem:
