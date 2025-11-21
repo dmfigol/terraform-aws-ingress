@@ -117,7 +117,7 @@ resource "awscc_elasticloadbalancingv2_load_balancer" "this" {
   security_groups = length(each.value.security_groups) > 0 ? [
     for sg_key in each.value.security_groups : module.security_groups[sg_key].this[sg_key].id
   ] : null
-  enforce_security_group_inbound_rules_on_private_link_traffic = each.value.type == "network" ? "off" : null
+  enforce_security_group_inbound_rules_on_private_link_traffic = each.value.type == "off"
 
   tags = concat([
     {
