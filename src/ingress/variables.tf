@@ -14,6 +14,8 @@ variable "load_balancers" {
         type         = optional(string, "forward")
         url          = optional(string, null)
         status_code  = optional(string, null)
+        message_body = optional(string, null)
+        content_type = optional(string, null)
       })
       rules = optional(list(object({
         priority = number
@@ -38,6 +40,28 @@ variable "load_balancers" {
     })), {})
     vpc_id = optional(string, null)
   }))
+
+  validation {
+    condition = length(flatten([
+      for lb_key, lb in var.load_balancers : [
+        for listener_key, listener in lb.listeners : [
+          for rule in listener.rules : rule.action.target_group
+          if rule.action.target_group != null && !contains(keys(var.load_balancer_target_groups), rule.action.target_group)
+        ]
+      ]
+    ])) == 0
+    error_message = "One or more target groups referenced in listener rules are not defined in load_balancer_target_groups."
+  }
+
+  validation {
+    condition = length(flatten([
+      for lb_key, lb in var.load_balancers : [
+        for listener_key, listener in lb.listeners : listener.default_action.target_group
+        if listener.default_action.target_group != null && !contains(keys(var.load_balancer_target_groups), listener.default_action.target_group)
+      ]
+    ])) == 0
+    error_message = "One or more target groups referenced in default actions are not defined in load_balancer_target_groups."
+  }
 }
 
 variable "load_balancer_target_groups" {
@@ -65,6 +89,7 @@ variable "certificates" {
 
 variable "security_groups" {
   type = map(object({
+    vpc_id      = optional(string, null)
     description = optional(string, "")
     inbound = optional(list(object({
       protocol    = optional(string, "-1")
@@ -81,6 +106,12 @@ variable "security_groups" {
     tags = optional(map(string), {})
   }))
   default = {}
+}
+
+variable "vpc_id" {
+  description = "Default VPC ID to use for resources when not specified at the resource level"
+  type        = string
+  default     = null
 }
 
 variable "common_tags" {

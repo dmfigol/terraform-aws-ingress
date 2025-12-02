@@ -6,25 +6,17 @@ locals {
     ])
   }
 
-  # Map VPC IDs for each load balancer
+  # Map VPC IDs for each load balancer - use lb-specific vpc_id or fall back to top-level vpc_id
   load_balancer_vpc_ids = {
-    for lb_key, lb in var.load_balancers : lb_key => coalesce(lb.vpc_id, data.aws_subnet.lb_subnets[lb_key].vpc_id)
+    for lb_key, lb in var.load_balancers : lb_key => coalesce(lb.vpc_id, var.vpc_id)
   }
 
-  # Map VPC IDs for each security group based on which load balancers reference them
+  # Map VPC IDs for each security group - use sg-specific vpc_id or fall back to top-level vpc_id
   security_group_vpc_ids = {
-    for sg_key, sg in var.security_groups : sg_key => coalesce(
-      # Try to get VPC ID from the first load balancer that references this security group
-      try(local.load_balancer_vpc_ids[[
-        for lb_key, lb in var.load_balancers : lb_key
-        if contains(lb.security_groups, sg_key)
-      ][0]], null),
-      # Fallback to the first load balancer's VPC if no load balancers reference this SG
-      local.load_balancer_vpc_ids[keys(local.load_balancer_vpc_ids)[0]]
-    )
+    for sg_key, sg in var.security_groups : sg_key => coalesce(sg.vpc_id, var.vpc_id)
   }
 
-  # Map VPC IDs for each target group based on which load balancers reference them
+  # Map VPC IDs for each target group - use vpc_id from referencing load balancer or fall back to top-level vpc_id
   target_group_vpc_ids = {
     for tg_key, tg in var.load_balancer_target_groups : tg_key => coalesce(
       # Try to get VPC ID from the first load balancer that references this target group
@@ -34,8 +26,8 @@ locals {
           for listener_key, listener in lb.listeners : listener.default_action.target_group
         ], tg_key)
       ][0]], null),
-      # Fallback to the first load balancer's VPC if no load balancers reference this TG
-      local.load_balancer_vpc_ids[keys(local.load_balancer_vpc_ids)[0]]
+      # Fallback to top-level vpc_id if no load balancers reference this TG
+      var.vpc_id
     )
   }
 
@@ -49,4 +41,41 @@ locals {
       )
     }
   }
+
+  # Validation: Collect all target group references from listeners
+  all_listener_target_group_references = distinct(flatten([
+    for lb_key, lb in var.load_balancers : [
+      for listener_key, listener in lb.listeners : [
+        for rule in listener.rules : rule.action.target_group
+        if rule.action.target_group != null
+      ]
+    ]
+  ]))
+
+  # Validation: Collect all target group references from default actions
+  all_default_action_target_group_references = distinct(flatten([
+    for lb_key, lb in var.load_balancers : [
+      for listener_key, listener in lb.listeners : listener.default_action.target_group
+      if listener.default_action.target_group != null
+    ]
+  ]))
+
+  # Validation: Combine all target group references
+  all_target_group_references = distinct(concat(
+    local.all_listener_target_group_references,
+    local.all_default_action_target_group_references
+  ))
+
+  # Validation: Check for missing target groups
+  missing_target_groups = [
+    for tg_ref in local.all_target_group_references : tg_ref
+    if !contains(keys(var.load_balancer_target_groups), tg_ref)
+  ]
+
+  # Validation error message
+  validation_error_message = length(local.missing_target_groups) > 0 ? format(
+    "The following target groups are referenced but not defined: %s. Available target groups: %s",
+    join(", ", local.missing_target_groups),
+    join(", ", keys(var.load_balancer_target_groups))
+  ) : ""
 }

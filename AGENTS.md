@@ -24,7 +24,7 @@
 - Fix README.md when it is outdated (e.g. the input interface changes).
 
 ## Tool selection
-When you need to call tools from the shell, use the following tools if they are available on the ystem:
+When you need to call tools from the shell, use the following tools if they are available on the system:
 
 - Find files: `fd`
 - Find Text: `rg` (ripgrep)

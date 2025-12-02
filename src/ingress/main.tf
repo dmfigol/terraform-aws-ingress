@@ -174,6 +174,15 @@ resource "aws_lb_listener" "this" {
         }
       }
     }
+
+    dynamic "fixed_response" {
+      for_each = each.value.listener.default_action.type == "fixed-response" ? [1] : []
+      content {
+        status_code  = each.value.listener.default_action.status_code
+        message_body = each.value.listener.default_action.message_body
+        content_type = each.value.listener.default_action.content_type
+      }
+    }
   }
 }
 
