@@ -209,9 +209,18 @@ resource "aws_lb_listener_rule" "this" {
   priority     = each.value.rule.priority
 
   dynamic "condition" {
-    for_each = each.value.rule.conditions
+    for_each = [for c in each.value.rule.conditions : c if c.field == "host-header"]
     content {
       host_header {
+        values = condition.value.values
+      }
+    }
+  }
+
+  dynamic "condition" {
+    for_each = [for c in each.value.rule.conditions : c if c.field == "path-pattern"]
+    content {
+      path_pattern {
         values = condition.value.values
       }
     }

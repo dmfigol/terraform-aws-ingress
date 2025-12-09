@@ -8,15 +8,15 @@ module "ingress" {
       "type" : "network",
       "subnet_mappings" : [for subnet_id in var.subnet_ids : { "subnet_id" : subnet_id }],
       "listeners" : {
-        "TCP_443" : {"default_action" : { "target_group" : "TestNLBToALB-TCP-443" } },
+        "TCP_443" : { "default_action" : { "target_group" : "TestNLBToALB-TCP-443" } },
         "TLS_8443" : { "certificates" : ["TestNLB"], "default_action" : { "target_group" : "TestNLB-TCP-8080" } },
         "UDP_20000" : { "default_action" : { "target_group" : "TestNLB-UDP-20000" } },
       },
       "security_groups" : ["TestNLB"],
       "dns_records" : {
-        "test-nlb.${var.domain}|A" : { "type" : "A", "zone" : "${var.domain}" },
+        "test-nlb.${var.domain}|A" : { "name": "test-nlb.${var.domain}", "type" : "A", "zone" : "${var.domain}" },
         # "test-nlb.${var.domain}|AAAA" : { "type" : "AAAA", "zone" : "${var.domain}" },  # by default lb is ipv4
-        "test.${var.domain}|A" : { "type" : "A", "zone" : "${var.domain}" },
+        "test.${var.domain}|A" : { "name": "test.${var.domain}", "type" : "A", "zone" : "${var.domain}" },
         # "test.${var.domain}|AAAA" : { "type" : "AAAA", "zone" : "${var.domain}" },  # by default lb is ipv4
       }
     },
@@ -60,7 +60,7 @@ module "ingress" {
     # "AppUI-HTTP-8000" : { "target_type" : "instance", "protocol" : "HTTP", "port" : 8000, "health_check" : { "protocol" : "HTTP", "port" : 8000, "path" : "/health" }, "targets" : [
     #   "i-009ad6a5c320bf378:8000"
     # ] },
-    "TestNLBToALB-TCP-443" : { "target_type" : "alb", "protocol" : "TCP", "port" : 443, "health_check" : { "protocol" : "HTTPS", "path": "/health" },  "targets" : ["lb@TestALB:443"] },
+    "TestNLBToALB-TCP-443" : { "target_type" : "alb", "protocol" : "TCP", "port" : 443, "health_check" : { "protocol" : "HTTPS", "path" : "/health" }, "targets" : ["lb@TestALB:443"] },
     "TestALB-HTTPS-8089" : { "target_type" : "ip", "protocol" : "HTTPS", "port" : 8089, "targets" : [
       "10.20.2.17:8089"
     ] },
