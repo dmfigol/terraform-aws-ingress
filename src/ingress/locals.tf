@@ -78,4 +78,34 @@ locals {
     join(", ", local.missing_target_groups),
     join(", ", keys(var.load_balancer_target_groups))
   ) : ""
+
+  # Resolve lb@<name>:<port> notation for ALB target types
+  # Format: lb@<lb_name> or lb@<lb_name>:<port>
+  # If port is not specified, uses the target group's port
+  resolved_target_group_targets = {
+    for tg_key, tg in var.load_balancer_target_groups : tg_key => [
+      for target in tg.targets : {
+        # Check if target uses lb@ notation
+        is_lb_ref = startswith(target, "lb@")
+        # Extract lb name (part after lb@ and before optional :port)
+        lb_name = startswith(target, "lb@") ? (
+          length(regexall(":", substr(target, 3, length(target) - 3))) > 0 ?
+          split(":", substr(target, 3, length(target) - 3))[0] :
+          substr(target, 3, length(target) - 3)
+        ) : null
+        # Extract port if specified, otherwise use target group port
+        port = startswith(target, "lb@") ? (
+          length(regexall(":", substr(target, 3, length(target) - 3))) > 0 ?
+          tonumber(split(":", substr(target, 3, length(target) - 3))[1]) :
+          tg.port
+          ) : (
+          length(split(":", target)) > 1 ? tonumber(split(":", target)[1]) : null
+        )
+        # Original target value for non-lb@ targets
+        original = target
+        # ID for the target - will be resolved to ARN for lb@ or original id for others
+        id = startswith(target, "lb@") ? null : split(":", target)[0]
+      }
+    ]
+  }
 }

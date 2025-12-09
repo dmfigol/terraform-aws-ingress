@@ -42,6 +42,16 @@ variable "load_balancers" {
   }))
 
   validation {
+    condition = alltrue([
+      for lb_name, lb in var.load_balancers :
+      can(regex("^[a-zA-Z0-9]([a-zA-Z0-9-]{0,30}[a-zA-Z0-9])?$", lb_name)) &&
+      !startswith(lb_name, "internal-") &&
+      length(lb_name) <= 32
+    ])
+    error_message = "Load balancer names must be unique per region per account, can have a maximum of 32 characters, must contain only alphanumeric characters or hyphens, must not begin or end with a hyphen, and must not begin with 'internal-'."
+  }
+
+  validation {
     condition = length(flatten([
       for lb_key, lb in var.load_balancers : [
         for listener_key, listener in lb.listeners : [
@@ -77,6 +87,36 @@ variable "load_balancer_target_groups" {
     }))
     targets = optional(list(string), [])
   }))
+
+  validation {
+    condition = alltrue([
+      for tg_name, tg in var.load_balancer_target_groups :
+      can(regex("^[a-zA-Z0-9]([a-zA-Z0-9-]{0,30}[a-zA-Z0-9])?$", tg_name)) &&
+      length(tg_name) <= 32
+    ])
+    error_message = "Target group names must be unique per region per account, can have a maximum of 32 characters, must contain only alphanumeric characters or hyphens, and must not begin or end with a hyphen."
+  }
+
+  validation {
+    condition = alltrue([
+      for tg_name, tg in var.load_balancer_target_groups :
+      contains(["instance", "ip", "lambda", "alb"], tg.target_type)
+    ])
+    error_message = "Target type must be one of: instance, ip, lambda, alb."
+  }
+
+  validation {
+    condition = alltrue([
+      for tg_name, tg in var.load_balancer_target_groups : tg.target_type != "alb" || (
+        length(tg.targets) > 0 && alltrue([
+          for target in tg.targets :
+          can(regex("^arn:aws:elasticloadbalancing:[a-z0-9-]+:[0-9]{12}:loadbalancer/[a-z0-9-]+/[a-z0-9]+$", target)) ||
+          can(regex("^lb@[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9](:[0-9]+)?$", target))
+        ])
+      )
+    ])
+    error_message = "ALB target type must use either load balancer ARN format (e.g., 'arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/my-load-balancer/50dc6c495eb0a8ad') or lb@ notation referencing a load balancer defined in load_balancers (e.g., 'lb@MyALB' or 'lb@MyALB:443')."
+  }
 }
 
 variable "certificates" {

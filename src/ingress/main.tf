@@ -84,9 +84,11 @@ resource "awscc_elasticloadbalancingv2_target_group" "this" {
   health_check_path     = local.health_check_defaults[each.key].path
 
   targets = length(each.value.targets) > 0 ? [
-    for target in each.value.targets : {
-      id   = split(":", target)[0]
-      port = length(split(":", target)) > 1 ? tonumber(split(":", target)[1]) : null
+    for idx, target_info in local.resolved_target_group_targets[each.key] : {
+      id = target_info.is_lb_ref ? awscc_elasticloadbalancingv2_load_balancer.this[target_info.lb_name].load_balancer_arn : target_info.id
+      port = each.value.target_type == "alb" ? target_info.port : (
+        target_info.is_lb_ref ? null : target_info.port
+      )
     }
   ] : null
 
