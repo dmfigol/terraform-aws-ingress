@@ -154,6 +154,44 @@ variable "vpc_id" {
   default     = null
 }
 
+variable "vpc_endpoint_services" {
+  description = "Map of VPC endpoint services to create"
+  type = map(object({
+    load_balancers   = list(string) # Format: "lb@<lb_name>" or ARN
+    private_dns_name = optional(string, null)
+    dns_validation = optional(object({
+      zone = string # Public hosted zone for DNS validation records
+    }), null)
+    acceptance_required          = optional(bool, true)
+    contributor_insights_enabled = optional(bool, false) # Not yet supported by provider
+    supported_regions            = optional(list(string), [])
+    supported_ip_address_types   = optional(list(string), ["ipv4"])
+    allow_principals             = optional(list(string), [])
+    tags                         = optional(map(string), {})
+  }))
+  default = {}
+
+  validation {
+    condition = alltrue([
+      for svc_key, svc in var.vpc_endpoint_services :
+      alltrue([
+        for lb in svc.load_balancers :
+        can(regex("^arn:aws:elasticloadbalancing:[a-z0-9-]+:[0-9]{12}:loadbalancer/net/", lb)) ||
+        can(regex("^lb@[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]?$", lb))
+      ])
+    ])
+    error_message = "Load balancers must be either NLB ARNs or lb@ notation referencing a load balancer defined in load_balancers (e.g., 'lb@MyNLB')."
+  }
+
+  validation {
+    condition = alltrue([
+      for svc_key, svc in var.vpc_endpoint_services :
+      svc.dns_validation == null || svc.private_dns_name != null
+    ])
+    error_message = "dns_validation can only be set when private_dns_name is provided."
+  }
+}
+
 variable "common_tags" {
   description = "Common tags to apply to all taggable resources"
   type        = map(string)

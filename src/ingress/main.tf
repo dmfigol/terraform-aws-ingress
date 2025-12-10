@@ -271,3 +271,62 @@ module "dns_records" {
     aws = aws.dns_owner
   }
 }
+
+# VPC Endpoint Services
+resource "aws_vpc_endpoint_service" "this" {
+  for_each = var.vpc_endpoint_services
+
+  acceptance_required = each.value.acceptance_required
+
+  network_load_balancer_arns = [
+    for lb in each.value.load_balancers :
+    startswith(lb, "lb@") ?
+    awscc_elasticloadbalancingv2_load_balancer.this[substr(lb, 3, length(lb) - 3)].load_balancer_arn :
+    lb
+  ]
+
+  private_dns_name           = each.value.private_dns_name
+  supported_ip_address_types = each.value.supported_ip_address_types
+  supported_regions          = length(each.value.supported_regions) > 0 ? each.value.supported_regions : null
+
+  tags = merge(var.common_tags, { Name = each.key }, each.value.tags)
+}
+
+# VPC Endpoint Service Allowed Principals
+resource "aws_vpc_endpoint_service_allowed_principal" "this" {
+  for_each = {
+    for combo in flatten([
+      for svc_key, svc in var.vpc_endpoint_services : [
+        for principal in svc.allow_principals : {
+          svc_key   = svc_key
+          principal = principal
+        }
+      ]
+    ]) : "${combo.svc_key}_${combo.principal}" => combo
+  }
+
+  vpc_endpoint_service_id = aws_vpc_endpoint_service.this[each.value.svc_key].id
+  principal_arn           = each.value.principal
+}
+
+# VPC Endpoint Service Private DNS Name Validation Records
+module "vpc_endpoint_service_dns_validation" {
+  source = "git::https://github.com/dmfigol/terraform-aws-dns.git//src/dns-records?ref=main"
+
+  dns_records = merge([
+    for svc_key, svc in var.vpc_endpoint_services : svc.dns_validation != null ? {
+      "vpc-endpoint-service-validation-${svc_key}" = {
+        name      = "${aws_vpc_endpoint_service.this[svc_key].private_dns_name_configuration[0].name}.${svc.private_dns_name}"
+        type      = aws_vpc_endpoint_service.this[svc_key].private_dns_name_configuration[0].type
+        records   = [aws_vpc_endpoint_service.this[svc_key].private_dns_name_configuration[0].value]
+        zone      = svc.dns_validation.zone
+        zone_type = "public"
+        ttl       = 60
+      }
+    } : {}
+  ]...)
+
+  providers = {
+    aws = aws.dns_owner
+  }
+}

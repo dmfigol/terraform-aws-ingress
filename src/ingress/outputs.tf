@@ -32,3 +32,21 @@ output "dns_records" {
   description = "Created DNS records"
   value       = module.dns_records.records
 }
+
+output "vpc_endpoint_services" {
+  description = "Created VPC endpoint services"
+  value = {
+    for k, v in aws_vpc_endpoint_service.this : k => {
+      id                             = v.id
+      arn                            = v.arn
+      service_name                   = v.service_name
+      service_type                   = v.service_type
+      state                          = v.state
+      availability_zones             = v.availability_zones
+      base_endpoint_dns_names        = v.base_endpoint_dns_names
+      private_dns_name               = v.private_dns_name
+      private_dns_name_configuration = v.private_dns_name_configuration
+      tags                           = { for tag_key, tag_value in v.tags : tag_key => tag_value if !startswith(tag_key, "aws:") }
+    }
+  }
+}

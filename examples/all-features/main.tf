@@ -10,13 +10,13 @@ module "ingress" {
       "listeners" : {
         "TCP_443" : { "default_action" : { "target_group" : "TestNLBToALB-TCP-443" } },
         "TLS_8443" : { "certificates" : ["TestNLB"], "default_action" : { "target_group" : "TestNLB-TCP-8080" } },
-        "UDP_20000" : { "default_action" : { "target_group" : "TestNLB-UDP-20000" } },
+        # "UDP_20000" : { "default_action" : { "target_group" : "TestNLB-UDP-20000" } },
       },
       "security_groups" : ["TestNLB"],
       "dns_records" : {
-        "test-nlb.${var.domain}|A" : { "name": "test-nlb.${var.domain}", "type" : "A", "zone" : "${var.domain}" },
+        "test-nlb.${var.domain}|A" : { "name" : "test-nlb.${var.domain}", "type" : "A", "zone" : "${var.domain}" },
         # "test-nlb.${var.domain}|AAAA" : { "type" : "AAAA", "zone" : "${var.domain}" },  # by default lb is ipv4
-        "test.${var.domain}|A" : { "name": "test.${var.domain}", "type" : "A", "zone" : "${var.domain}" },
+        "test.${var.domain}|A" : { "name" : "test.${var.domain}", "type" : "A", "zone" : "${var.domain}" },
         # "test.${var.domain}|AAAA" : { "type" : "AAAA", "zone" : "${var.domain}" },  # by default lb is ipv4
       }
     },
@@ -95,6 +95,22 @@ module "ingress" {
     },
   }
 
+  vpc_endpoint_services = {
+    "TestService" : {
+      "load_balancers" : ["lb@TestNLB"],
+      "private_dns_name" : "test.${var.domain}",
+      "dns_validation" : { "zone" : "${var.domain}" },
+      "acceptance_required" : false, # default to true
+      # "contributor_insights_enabled": true,  # is not supported yet
+      "supported_regions" : [var.region, "us-east-1"], # default to empty array
+      # "supported_ip_address_types": ["ipv4"], $ default to ["ipv4"],
+      "tags" : { "CustomTag" : "CustomValue" },
+      "allow_principals" : [
+        "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+      ],
+    },
+  }
+
   common_tags = merge({
     "Project" : "terraform-aws-ingress_dev",
     "Environment" : "dev",
@@ -130,3 +146,5 @@ variable "extra_tags" {
   type    = map(string)
   default = {}
 }
+
+data "aws_caller_identity" "current" {}
