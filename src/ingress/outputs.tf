@@ -1,15 +1,17 @@
 output "load_balancers" {
-  value = merge(awscc_elasticloadbalancingv2_load_balancer.this, { "tags" : {
-    for tag in awscc_elasticloadbalancingv2_load_balancer.this.tags :
-    tag.key => tag.value
-  } })
+  value = {
+    for k, v in awscc_elasticloadbalancingv2_load_balancer.this : k => merge(v, {
+      tags = { for tag in v.tags : tag.key => tag.value }
+    })
+  }
 }
 
 output "target_groups" {
-  value = merge(awscc_elasticloadbalancingv2_target_group.this, { "tags" : {
-    for tag in awscc_elasticloadbalancingv2_target_group.this.tags :
-    tag.key => tag.value
-  } })
+  value = {
+    for k, v in awscc_elasticloadbalancingv2_target_group.this : k => merge(v, {
+      tags = { for tag in v.tags : tag.key => tag.value }
+    })
+  }
 }
 
 output "target_group_arns" {
