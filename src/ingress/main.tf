@@ -103,6 +103,12 @@ resource "awscc_elasticloadbalancingv2_target_group" "this" {
       value = tag_value
     }
   ])
+
+  lifecycle {
+    ignore_changes = [
+      tags,
+    ]
+  }
 }
 
 # Load Balancers
@@ -132,6 +138,12 @@ resource "awscc_elasticloadbalancingv2_load_balancer" "this" {
       value = tag_value
     }
   ])
+
+  lifecycle {
+    ignore_changes = [
+      tags,
+    ]
+  }
 }
 
 # Load Balancer Listeners
